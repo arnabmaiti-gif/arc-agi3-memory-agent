@@ -1,0 +1,12 @@
+[project]
+name = "arc-agi-3-env"
+version = "0.1.0"
+description = "ARC-AGI-3 public bench (25 interactive grid games) as a HUD v6 environment"
+requires-python = ">=3.11"
+dependencies = [
+    "hud-python",
+    "arc-agi",
+    "pillow",
+]
+# Environment identity is the name in `Environment("arc-agi-3", ...)` (env.py);
+# no [tool.hud] image key — the deploy/build path reads the name from source.

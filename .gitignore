@@ -1,0 +1,8 @@
+environment_files/
+recordings/
+results/
+scorecard.json
+.hud/
+.venv/
+__pycache__/
+*.pyc
