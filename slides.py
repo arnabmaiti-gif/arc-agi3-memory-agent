@@ -21,9 +21,11 @@ def main() -> None:
     exs = _examples()
     inst = _mem_instances()
     casc = exs[0] if exs else {"nuance": "—", "note": "—"}
-    demo = inst[0] if inst else None
-    demo_note = html.escape(demo["note"]) if demo else "if a move changes only non-player tiles, it's a wall — switch direction."
-    demo_grid = json.dumps(demo["grid"]) if demo else json.dumps(grid)
+    cpath = _DIR / "data" / "contrast.json"
+    cd = json.loads(cpath.read_text()) if cpath.exists() else None
+    before_grid = json.dumps(cd["before"]["grid"]) if cd else json.dumps(grid)
+    after_grid = json.dumps(cd["after"]["grid"]) if cd else json.dumps(grid)
+    note = html.escape(cd["note"]) if cd else "if a move only changes non-player tiles, it's a wall — switch direction."
 
     page = f"""<title>Memory for ARC-AGI-3 — pitch</title>
 <style>
@@ -130,17 +132,22 @@ def main() -> None:
 
 <section class="slide">
   <p class="eyebrow">// it works</p>
-  <h2>Same board. What it <span class="v">remembers</span> changes everything.</h2>
-  <div class="row">
-    <canvas id="g2" width="64" height="64"></canvas>
-    <div class="col">
-      <div class="no-box" style="margin-bottom:16px"><span class="tag no">without recollection</span>
-        <p style="margin:0;font-size:15px">No record that this move already failed — it re-issues the blocked move
-        and burns its budget.</p></div>
-      <div class="note-box"><span class="tag ltm">our memory injects</span>
-        <p style="margin:0;font-size:15px">{demo_note}</p></div>
+  <h2>Same game. What it <span class="v">remembers</span> changes the move.</h2>
+  <div class="row" style="align-items:flex-end;gap:22px">
+    <div style="text-align:center">
+      <span class="tag no">1 · without memory</span>
+      <canvas id="g2" width="64" height="64" style="display:block;margin:10px auto"></canvas>
+      <p class="sub" style="font-size:14px;max-width:230px">re-tries a blocked move and stalls near the start</p>
+    </div>
+    <div style="font-size:34px;color:var(--violet);padding-bottom:60px">→</div>
+    <div style="text-align:center">
+      <span class="tag ltm">2 · with memory</span>
+      <canvas id="g3" width="64" height="64" style="display:block;margin:10px auto"></canvas>
+      <p class="sub" style="font-size:14px;max-width:230px">switches direction; the player climbs toward the exit</p>
     </div>
   </div>
+  <div class="note-box" style="margin-top:18px;max-width:62ch"><span class="tag ltm">the injected note</span>
+    <p style="margin:0;font-size:15px">{note}</p></div>
 </section>
 
 <section class="slide">
@@ -168,7 +175,8 @@ def main() -> None:
     }}
   }}
   paint('g1', {json.dumps(grid)});
-  paint('g2', {demo_grid});
+  paint('g2', {before_grid});
+  paint('g3', {after_grid});
 
   const slides = [...document.querySelectorAll('.slide')];
   const dots = document.getElementById('dots');

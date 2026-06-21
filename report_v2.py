@@ -77,21 +77,33 @@ def main() -> None:
         <div class="casc-row"><span class="tag ltm">LTM · transferable note (injected)</span><p>{html.escape(e['note'])}</p></div>
       </div>"""
 
-    # without-vs-with visual contrast, using a real captured (board, note) instance
-    contrast = ""
-    for i, e in enumerate(instances[:2]):
-        contrast += f"""
+    # before -> after contrast: two real boards + the real in-game move-budget bar
+    cpath = _DIR / "data" / "contrast.json"
+    cd = json.loads(cpath.read_text()) if cpath.exists() else None
+    if cd:
+        contrast = f"""
       <div class="contrast">
-        <canvas id="mem{i}" width="64" height="64"></canvas>
-        <div class="cc">
-          <div class="cc-no"><span class="tag no">without recollection</span>
-            <p>The agent has no record that this move-pattern already failed — so it re-issues the same
-            blocked move and burns its budget. (Exactly the loop we saw in no-memory runs.)</p></div>
-          <div class="cc-yes"><span class="tag ltm">our memory injects</span>
-            <p>{html.escape(e['note'])}</p></div>
+        <div class="cside">
+          <span class="tag no">1 · without memory</span>
+          <canvas id="cbefore" width="64" height="64"></canvas>
+          <div class="budget">move budget<div class="bar"><i style="width:{cd['before']['budget']}%"></i></div></div>
+          <p>With no record of past attempts, the agent re-tries a move that's blocked and stalls near the
+          start — spending actions with no progress.</p>
         </div>
-      </div>"""
-    mem_grids = json.dumps([e["grid"] for e in instances[:2]])
+        <div class="cside">
+          <span class="tag ltm">2 · with memory</span>
+          <canvas id="cafter" width="64" height="64"></canvas>
+          <div class="budget">move budget<div class="bar"><i style="width:{cd['after']['budget']}%"></i></div></div>
+          <p>Handed the note below, it <b>switches direction</b> and climbs toward the exit — the player block
+          has moved up the board.</p>
+        </div>
+      </div>
+      <div class="note-box" style="margin-top:6px"><span class="tag ltm">the note memory injected</span>
+        <p style="margin:0">{html.escape(cd['note'])}</p></div>"""
+        cgrids = (f"paint('cbefore', {json.dumps(cd['before']['grid'])}); "
+                  f"paint('cafter', {json.dumps(cd['after']['grid'])});")
+    else:
+        contrast, cgrids = '<p class="dim">(contrast pending)</p>', ""
 
     page = f"""<title>Memory for ARC-AGI-3 · learning from experience</title>
 <style>
@@ -124,12 +136,13 @@ def main() -> None:
   .casc {{ background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--violet); border-radius:12px; padding:16px 18px; margin:14px 0; }}
   .casc-row p {{ margin:0; font-size:15.5px; }} .casc-row {{ margin:8px 0; }}
   .casc-arrow {{ font-family:var(--mono); font-size:11px; color:var(--violet); margin:8px 0 4px; }}
-  .contrast {{ display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px; margin:16px 0; }}
-  .contrast canvas {{ width:190px; flex:0 0 auto; }}
-  .cc {{ flex:1; min-width:240px; display:flex; flex-direction:column; gap:12px; }}
-  .cc p {{ margin:0; font-size:15px; }}
-  .cc-no {{ border-left:3px solid var(--red); padding-left:12px; }}
-  .cc-yes {{ border-left:3px solid var(--green); padding-left:12px; }}
+  .contrast {{ display:flex; gap:18px; align-items:stretch; flex-wrap:wrap; margin:16px 0; }}
+  .cside {{ flex:1; min-width:270px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px; }}
+  .cside canvas {{ width:100%; max-width:230px; margin:10px 0; }}
+  .cside p {{ margin:0; font-size:14.5px; }}
+  .budget {{ font-family:var(--mono); font-size:11px; color:var(--dim); margin:0 0 6px; }}
+  .budget .bar {{ height:8px; background:var(--line); border-radius:5px; overflow:hidden; margin-top:4px; max-width:230px; }}
+  .budget .bar i {{ display:block; height:100%; background:var(--yellow); }}
   .aspects {{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:22px 0; }}
   @media(max-width:640px){{ .aspects{{grid-template-columns:repeat(2,1fr);}} }}
   .asp {{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; }}
@@ -178,9 +191,10 @@ def main() -> None:
   <section>
     <p class="eyebrow">// 02 — why memory matters</p>
     <h2>Same board. What the agent <i>remembers</i> changes everything.</h2>
-    <p class="lede">A real board the agent faced. Left: the actual frame. Right: with no recollection it repeats
-    a mistake; with our memory it's handed the relevant lesson from past play.</p>
-    {contrast or '<p class="dim">(visual instances pending an extract)</p>'}
+    <p class="lede">Two real boards. <b>(1)</b> Without memory the agent re-tries a blocked move and stalls
+    near the start. <b>(2)</b> With memory — handed the lesson from past play — it switches direction and the
+    player climbs toward the exit.</p>
+    {contrast}
   </section>
 
   <section>
@@ -253,7 +267,7 @@ def main() -> None:
     }}
   }}
   paint('grid', {json.dumps(grid)});
-  {mem_grids}.forEach((g, i) => paint('mem' + i, g));
+  {cgrids}
 </script>
 """
     out = _DIR / "report.html"
