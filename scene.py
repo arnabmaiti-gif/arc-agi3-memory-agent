@@ -200,6 +200,146 @@ def scene_sequence(frames: list[dict]) -> list[str]:
     return out
 
 
+def _to_color_int(c) -> int | None:
+    """Accept a color int or a name ('green', 'yellow', ...)."""
+    if isinstance(c, int):
+        return c
+    s = str(c).strip().lower()
+    if s.isdigit():
+        return int(s)
+    return COLOR_NAMES.index(s) if s in COLOR_NAMES else None
+
+
+def _nearest_walkable(grid, wset, x, y, R: int = 10):
+    """Nearest cell to (x,y) whose color is walkable (player/target usually sit
+    on top of floor, so we snap to the adjacent floor)."""
+    from collections import deque
+
+    h, w = len(grid), len(grid[0])
+    q, seen = deque([(x, y)]), {(x, y)}
+    while q:
+        cx, cy = q.popleft()
+        if 0 <= cx < w and 0 <= cy < h and grid[cy][cx] in wset:
+            return (cx, cy)
+        if abs(cx - x) + abs(cy - y) > R:
+            continue
+        for dx, dy in ((0, -1), (0, 1), (-1, 0), (1, 0)):
+            nb = (cx + dx, cy + dy)
+            if nb not in seen:
+                seen.add(nb)
+                q.append(nb)
+    return (x, y)
+
+
+def bfs_path(grid, walkable, start, goal, max_nodes: int = 40000):
+    """Shortest 4-connected path over cells whose color is in `walkable`.
+    Player/target usually sit on floor, so start & goal are snapped to the
+    nearest walkable cell first. `walkable` = a color int/name or a list.
+    Returns a list of (x, y) or None. y is row (down), x is col (right)."""
+    from collections import deque
+
+    h, w = len(grid), len(grid[0])
+    if isinstance(walkable, (list, tuple, set)):
+        wset = {_to_color_int(c) for c in walkable}
+    else:
+        wset = {_to_color_int(walkable)}
+    wset.discard(None)
+    sx, sy = int(start[0]), int(start[1])
+    gx, gy = int(goal[0]), int(goal[1])
+    if 0 <= sy < h and 0 <= sx < w and grid[sy][sx] not in wset:
+        sx, sy = _nearest_walkable(grid, wset, sx, sy)
+    if 0 <= gy < h and 0 <= gx < w and grid[gy][gx] not in wset:
+        gx, gy = _nearest_walkable(grid, wset, gx, gy)
+
+    def ok(x, y):
+        return 0 <= x < w and 0 <= y < h and (grid[y][x] in wset or (x, y) == (gx, gy))
+
+    if not (0 <= sx < w and 0 <= sy < h and 0 <= gx < w and 0 <= gy < h):
+        return None
+    q = deque([(sx, sy)])
+    prev = {(sx, sy): None}
+    n = 0
+    while q and n < max_nodes:
+        x, y = q.popleft()
+        n += 1
+        if (x, y) == (gx, gy):
+            path, cur = [], (x, y)
+            while cur is not None:
+                path.append(cur)
+                cur = prev[cur]
+            return path[::-1]
+        for dx, dy in ((0, -1), (0, 1), (-1, 0), (1, 0)):
+            nx, ny = x + dx, y + dy
+            if (nx, ny) not in prev and ok(nx, ny):
+                prev[(nx, ny)] = (x, y)
+                q.append((nx, ny))
+    return None
+
+
+def path_segments(path) -> list[tuple[str, int]]:
+    """Compress a cell path to (direction, cells) segments (up/down/left/right)."""
+    if not path or len(path) < 2:
+        return []
+
+    def d(a, b):
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        if dx:
+            return "right" if dx > 0 else "left"
+        return "down" if dy > 0 else "up"
+
+    segs, cur, cnt = [], d(path[0], path[1]), 1
+    for i in range(1, len(path) - 1):
+        nd = d(path[i], path[i + 1])
+        if nd == cur:
+            cnt += 1
+        else:
+            segs.append((cur, cnt))
+            cur, cnt = nd, 1
+    segs.append((cur, cnt))
+    return segs
+
+
+_ASCII = {  # color int -> single char for the ASCII map
+    None: "?",
+}
+
+
+def ascii_map(grid, downsample: int = 2) -> str:
+    """Compact ASCII of the board: each color -> a distinct char, optionally
+    block-downsampled (each downsample x downsample cell -> majority color).
+    Returns the map plus a legend so the agent can read the maze as a grid."""
+    from collections import Counter
+
+    h, w = len(grid), len(grid[0])
+    ds = max(1, downsample)
+    chars = {}
+    nxt = [ord("a")]
+
+    def ch(c):
+        if c not in chars:
+            chars[c] = _name(c)[0].upper() if _name(c)[0].isalpha() else "#"
+            # ensure uniqueness
+            used = set(chars.values())
+            base = chars[c]
+            if list(chars.values()).count(base) > 1:
+                while chr(nxt[0]) in used:
+                    nxt[0] += 1
+                chars[c] = chr(nxt[0])
+                nxt[0] += 1
+        return chars[c]
+
+    rows = []
+    for by in range(0, h, ds):
+        line = []
+        for bx in range(0, w, ds):
+            block = [grid[y][x] for y in range(by, min(by + ds, h))
+                     for x in range(bx, min(bx + ds, w))]
+            line.append(ch(Counter(block).most_common(1)[0][0]))
+        rows.append("".join(line))
+    legend = ", ".join(f"{chars[c]}={_name(c)}" for c in sorted(chars))
+    return f"ASCII map ({w // ds}x{h // ds}, each char = {ds}x{ds} cells)\nlegend: {legend}\n" + "\n".join(rows)
+
+
 if __name__ == "__main__":  # quick smoke test on a real recording
     import sys
     from pathlib import Path

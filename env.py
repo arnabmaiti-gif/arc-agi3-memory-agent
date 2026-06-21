@@ -81,6 +81,42 @@ def _strategy_suffix() -> str:
     )
 
 
+# ─── pathfinding tool view (gated by ARC_TOOLS) ────────────────────────
+_TOOLS_ON = os.environ.get("ARC_TOOLS", "").lower() in ("1", "true", "yes", "on")
+
+
+def _toolview(agent: "HudBridgeAgent") -> str:
+    """Structured object list (with coordinates) + ASCII map, so the agent can
+    read the floor color and player/target coordinates to feed plan_path."""
+    if not _TOOLS_ON:
+        return ""
+    try:
+        from scene import ascii_map, describe_scene
+
+        f = agent.frames[-1]
+        grid = f.frame[-1]
+        return ("\n\n--- STRUCTURED VIEW (use with plan_path) ---\n"
+                + describe_scene(grid, state=f.state.name, levels=f.levels_completed,
+                                 win_levels=f.win_levels, available=list(f.available_actions or []))
+                + "\n\n" + ascii_map(grid, downsample=2))
+    except Exception:
+        return ""
+
+
+def _tools_suffix() -> str:
+    if not _TOOLS_ON:
+        return ""
+    return (
+        "\n\nPATHFINDING TOOL: you have plan_path(walkable, player_x, player_y, "
+        "target_x, target_y) — a BFS solver for the hard part (navigation). From "
+        "the STRUCTURED VIEW + ASCII map in each result, identify (a) the FLOOR "
+        "color the player moves through, (b) the player's cell, (c) the target "
+        "(collect the collectible first, then the exit). Call plan_path to get a "
+        "cell route, execute it as directional moves (ACTION1-4) verifying the "
+        "player actually shifts, and re-call plan_path after a few moves or if blocked."
+    )
+
+
 def _mem_path(game_id: str) -> Path:
     return _MEM_DIR / f"{game_id}.md"
 
@@ -403,7 +439,7 @@ async def look() -> list:
         return _content("No active game.")
     agent = _session["agent"]
     mem = await asyncio.to_thread(_maybe_inject_memory, agent)
-    return _content(_status(agent) + mem, _render(agent.frames[-1]))
+    return _content(_status(agent) + mem + _toolview(agent), _render(agent.frames[-1]))
 
 
 @server.tool
@@ -484,7 +520,43 @@ async def act(actions: str, reasoning: str = "") -> list:
                                  before_grid, action=actions),
     })
     mem = await asyncio.to_thread(_maybe_inject_memory, agent)
-    return _content("\n".join(log) + "\n" + _status(agent) + mem, _render(agent.frames[-1]))
+    return _content("\n".join(log) + "\n" + _status(agent) + mem + _toolview(agent),
+                    _render(agent.frames[-1]))
+
+
+@server.tool
+async def plan_path(walkable: str, player_x: int, player_y: int,
+                    target_x: int, target_y: int) -> list:
+    """BFS shortest route for the player to a target over walkable floor cells.
+
+    `walkable`: floor color the player moves through — a name ('green') or int.
+    (player_x, player_y): the player's current cell; (target_x, target_y): the
+    destination (collectible or exit). Returns a turn-by-turn route in grid cells;
+    execute it as directional moves (ACTION1-4), verifying the player shifts.
+    """
+    if _session is None:
+        return _content("No active game.")
+    agent: HudBridgeAgent = _session["agent"]
+    try:
+        from scene import bfs_path, path_segments
+
+        grid = agent.frames[-1].frame[-1]
+        path = bfs_path(grid, walkable, (player_x, player_y), (target_x, target_y))
+        if not path:
+            return _content(
+                f"No path over '{walkable}' floor from ({player_x},{player_y}) to "
+                f"({target_x},{target_y}). Check the floor color, or pick a reachable "
+                "sub-goal (a floor cell nearer the target).")
+        segs = path_segments(path)
+        route = ", ".join(f"{d} {n}" for d, n in segs)
+        _trace({"kind": "plan_path", "walkable": walkable, "from": [player_x, player_y],
+                "to": [target_x, target_y], "route": route})
+        return _content(
+            f"Route ({len(path)} cells, {len(segs)} legs): {route}.\n"
+            "Execute as directional moves toward each leg; after each act verify the "
+            "player block moved that way (if not, you hit a wall — re-call plan_path).")
+    except Exception as exc:
+        return _content(f"plan_path error: {exc}")
 
 
 # ─── the HUD environment ───────────────────────────────────────────────
@@ -565,7 +637,7 @@ async def play(game_id: str = "ls20-9607627b", scorecard_id: str = "",
         "limit). Batch several actions per act() call. Start with look(). When "
         "done or out of budget, reply with a short summary of the game's rules."
     )
-    answer = yield prompt + _strategy_suffix() + _memory_suffix(game_id)
+    answer = yield prompt + _strategy_suffix() + _tools_suffix() + _memory_suffix(game_id)
     trace_path = _session.get("trace") if (_TRACE_ON and _session) else None
     last = _finish_session()
     # Official scoring: per-game entries materialize when the card closes. We
