@@ -59,6 +59,26 @@ _MEMORY_ON = os.environ.get("ARC_MEMORY", "").lower() in ("1", "true", "yes", "o
 # Parametric memory model (Modal-served STM+LTM cascade), injected at attempt
 # start. Separate gate so it composes with / is independent of the text rulebook.
 _MEM_MODEL_ON = os.environ.get("ARC_MEM_MODEL", "").lower() in ("1", "true", "yes", "on")
+# Planning-strategy guidance appended to the task prompt (gated) — targets the
+# observed failure (spamming blocked moves) and pushes past level 1.
+_STRATEGY_ON = os.environ.get("ARC_STRATEGY", "").lower() in ("1", "true", "yes", "on")
+
+
+def _strategy_suffix() -> str:
+    if not _STRATEGY_ON:
+        return ""
+    return (
+        "\n\nSTRATEGY — follow this every attempt:\n"
+        "1. SURVEY first: name the background, the walls, the player sprite (the "
+        "object that moves when you act), the collectible/target, and the exit.\n"
+        "2. PLAN a route to the collectible, then to the exit, before moving.\n"
+        "3. VERIFY each move: after an act, check the player's cells actually "
+        "changed position. If they did NOT, you hit a wall/boundary — do not "
+        "repeat that direction; try a different one.\n"
+        "4. After a level clears the board changes — immediately re-survey, find "
+        "the new collectible + exit, and keep going.\n"
+        "5. Use your FULL action budget to clear as many levels as you can."
+    )
 
 
 def _mem_path(game_id: str) -> Path:
@@ -545,7 +565,7 @@ async def play(game_id: str = "ls20-9607627b", scorecard_id: str = "",
         "limit). Batch several actions per act() call. Start with look(). When "
         "done or out of budget, reply with a short summary of the game's rules."
     )
-    answer = yield prompt + _memory_suffix(game_id)
+    answer = yield prompt + _strategy_suffix() + _memory_suffix(game_id)
     trace_path = _session.get("trace") if (_TRACE_ON and _session) else None
     last = _finish_session()
     # Official scoring: per-game entries materialize when the card closes. We

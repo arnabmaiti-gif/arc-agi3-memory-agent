@@ -41,6 +41,7 @@ def log(msg: str) -> None:
 
 def run(cmd: list[str], env_extra: dict | None = None, label: str = "") -> int:
     env = dict(os.environ)
+    env["PYTHONUNBUFFERED"] = "1"  # stream subprocess prints (ab_run per-attempt)
     if env_extra:
         env.update(env_extra)
     log(f"$ {label or ' '.join(cmd[:5])}")

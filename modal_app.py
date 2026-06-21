@@ -107,7 +107,7 @@ def train(role: str, rows: list[dict], tag: str,
     return out
 
 
-@app.cls(image=image, gpu="A100", volumes={VOL: vol}, scaledown_window=60)
+@app.cls(image=image, gpu="H100", volumes={VOL: vol}, scaledown_window=60)
 class Memory:
     @modal.enter()
     def load(self):

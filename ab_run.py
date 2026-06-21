@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -57,7 +58,7 @@ async def main() -> None:
 
     results = []
     for i in range(1, K + 1):
-        t = play(game_id=game)
+        t = play(game_id=game, max_actions=int(os.environ.get("ARC_MAX_ACTIONS", "80")))
         t.slug = f"ab-{game.split('-')[0]}-{cond}-i{i}"
         agent = _make_agent(model, max_steps)
         job = await Taskset(f"ab-{game}", [t]).run(
@@ -69,7 +70,7 @@ async def main() -> None:
         m["reward"] = round(reward, 4)
         results.append(m)
         print(f"  {cond} attempt {i}: reward={reward:.3f} maxLvl={m.get('max_level')} "
-              f"acts={m.get('n_acts')} mem={'Y' if m.get('mem_injected') else 'N'}")
+              f"acts={m.get('n_acts')} mem={'Y' if m.get('mem_injected') else 'N'}", flush=True)
 
     out = _DIR / "runs" / f"ab_{game.split('-')[0]}_{cond}.json"
     out.parent.mkdir(exist_ok=True)
