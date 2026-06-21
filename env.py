@@ -21,6 +21,7 @@ import os
 import queue
 import re
 import socket
+import sys
 import threading
 import time
 from pathlib import Path
@@ -42,8 +43,165 @@ from arc_agents.agent import Agent as ArcAgent
 logger = logging.getLogger("arc-agi-3-env")
 
 _ENV_DIR = Path(__file__).resolve().parent
+if str(_ENV_DIR) not in sys.path:
+    sys.path.insert(0, str(_ENV_DIR))  # so `import scene` works under the runtime
 # The official Recorder reads this; keep its jsonl recordings with the env.
 os.environ.setdefault("RECORDINGS_DIR", str(_ENV_DIR / "recordings"))
+
+# ─── natural-language rulebook memory (gated by ARC_MEMORY) ────────────
+# The agent's own end-of-game summary is persisted per game and replayed
+# into the next attempt's prompt — a self-authored, in-context "rulebook"
+# that lets the policy carry what it learned forward across attempts.
+# Fully gated: with ARC_MEMORY unset the prompt is byte-identical to the
+# original, so a baseline run is unaffected.
+_MEM_DIR = _ENV_DIR / "memory"
+_MEMORY_ON = os.environ.get("ARC_MEMORY", "").lower() in ("1", "true", "yes", "on")
+# Parametric memory model (Modal-served STM+LTM cascade), injected at attempt
+# start. Separate gate so it composes with / is independent of the text rulebook.
+_MEM_MODEL_ON = os.environ.get("ARC_MEM_MODEL", "").lower() in ("1", "true", "yes", "on")
+
+
+def _mem_path(game_id: str) -> Path:
+    return _MEM_DIR / f"{game_id}.md"
+
+
+def _read_memory(game_id: str) -> str:
+    if not _MEMORY_ON:
+        return ""
+    p = _mem_path(game_id)
+    try:
+        return p.read_text().strip() if p.exists() else ""
+    except Exception:
+        return ""
+
+
+def _best_path(game_id: str) -> Path:
+    return _MEM_DIR / f"{game_id}.best"
+
+
+def _read_best(game_id: str) -> float:
+    p = _best_path(game_id)
+    try:
+        return float(p.read_text().strip()) if p.exists() else -1.0
+    except Exception:
+        return -1.0
+
+
+def _write_memory(game_id: str, text: str, reward: float) -> None:
+    """Ratchet memory: keep the rulebook from the best attempt so far.
+
+    Last-write-wins lets a later, doubt-filled attempt clobber a winning
+    rulebook (we saw exactly that). Only overwrite when this attempt did as
+    well or better, so hard-won lessons are never lost.
+    """
+    if not _MEMORY_ON or not text or not text.strip():
+        return
+    try:
+        _MEM_DIR.mkdir(exist_ok=True)
+        if reward >= _read_best(game_id):
+            _mem_path(game_id).write_text(text.strip() + "\n")
+            _best_path(game_id).write_text(str(reward))
+    except Exception as exc:
+        logger.warning("memory write failed for %s: %s", game_id, exc)
+
+
+def _memory_suffix(game_id: str) -> str:
+    prior = _read_memory(game_id)
+    if not prior:
+        return ""
+    return (
+        "\n\n--- YOUR NOTES FROM PREVIOUS ATTEMPTS AT THIS GAME ---\n"
+        "(You wrote these. Use them as a starting point, but verify against "
+        "what you actually observe, and refine them in your final summary.)\n"
+        f"{prior}\n"
+        "--- END NOTES ---"
+    )
+
+
+def _maybe_inject_memory(agent: "HudBridgeAgent") -> str:
+    """Per-step parametric memory: query the STM->LTM cascade on the CURRENT
+    scene each tool call and surface the note whenever it changes (deduped, so
+    it doesn't repeat). This puts the relevant hint in front of the agent at the
+    moment it faces the scenario — not one stale note at the start.
+
+    Gated by ARC_MEM_MODEL; never raises. ARC_STM_TAG selects this level's STM
+    adapter for the cascade; absent it, LTM-only.
+    """
+    if not _MEM_MODEL_ON or _session is None:
+        return ""
+    # Throttle: query every ARC_MEM_EVERY-th tool call (1 = every call). Keeps
+    # per-step latency + context bloat down on long attempts.
+    _session["mem_calls"] = _session.get("mem_calls", 0) + 1
+    every = int(os.environ.get("ARC_MEM_EVERY", "1") or "1")
+    if every > 1 and (_session["mem_calls"] - 1) % every != 0:
+        return ""
+    try:
+        import mem_client
+
+        scene = _scene_of(agent.frames[-1] if agent.frames else None)
+        if not scene:
+            return ""
+        stm_tag = os.environ.get("ARC_STM_TAG") or None
+        res = mem_client.memory_note(scene, stm_tag, timeout=150)
+        if not res or not res.get("note"):
+            return ""
+        note = res["note"]
+        if note == _session.get("last_note"):
+            return ""  # unchanged since last surfaced — don't repeat it
+        _session["last_note"] = note
+        _trace({"kind": "memory", "stm_tag": stm_tag,
+                "nuance": res.get("nuance"), "note": note})
+        block = "\n\n[MEMORY — hint from past attempts at this game; verify against what you see]\n"
+        if res.get("nuance"):
+            block += f"- noticed: {res['nuance']}\n"
+        block += f"- try: {note}"
+        return block
+    except Exception as exc:
+        _trace({"kind": "mem_error", "error": repr(exc)})
+        logger.warning("memory injection failed: %r", exc)
+        return ""
+
+# ─── trajectory tracing (gated by ARC_TRACE) ───────────────────────────
+# The clean per-attempt trace the raw recordings can't give us: the scene
+# description at each decision, the actions + the model's reasoning, and the
+# resulting state. This is the substrate the GPT teacher retrospects over to
+# manufacture (scene -> note) training data. Side-channel only — it never
+# touches the prompt, so baseline behaviour and reward are unchanged.
+_TRACE_DIR = _ENV_DIR / "traces"
+_TRACE_ON = os.environ.get("ARC_TRACE", "").lower() in ("1", "true", "yes", "on")
+
+
+def _scene_of(frame: Any, prev_grid: Any = None, action: str | None = None) -> str:
+    if frame is None or not getattr(frame, "frame", None):
+        return ""
+    try:
+        from scene import describe_scene
+
+        return describe_scene(
+            frame.frame[-1], prev_grid,
+            state=frame.state.name, levels=frame.levels_completed,
+            win_levels=frame.win_levels,
+            available=list(frame.available_actions or []), action=action,
+        )
+    except Exception:
+        return ""
+
+
+def _trace_write(path: str | None, record: dict) -> None:
+    if not path:
+        return
+    try:
+        with open(path, "a") as fh:
+            fh.write(json.dumps(record, default=str) + "\n")
+    except Exception as exc:
+        logger.debug("trace write failed: %s", exc)
+
+
+def _trace(record: dict) -> None:
+    if not _TRACE_ON or _session is None:
+        return
+    _trace_write(_session.get("trace"), record)
+
 
 # ─── the 25 public bench games ─────────────────────────────────────────
 
@@ -147,6 +305,12 @@ def _start_session(game_id: str, scorecard_id: str | None, max_actions: int) -> 
     thread = threading.Thread(target=agent.main, daemon=True, name=f"arc-{game_id}")
     thread.start()
     _session = {"agent": agent, "thread": thread, "game_id": game_id}
+    if _TRACE_ON:
+        try:
+            _TRACE_DIR.mkdir(exist_ok=True)
+            _session["trace"] = str(_TRACE_DIR / f"{game_id}.{int(time.time())}.trace.jsonl")
+        except Exception as exc:
+            logger.debug("trace init failed: %s", exc)
 
 
 def _finish_session() -> Any:
@@ -218,7 +382,8 @@ async def look() -> list:
     if _session is None:
         return _content("No active game.")
     agent = _session["agent"]
-    return _content(_status(agent), _render(agent.frames[-1]))
+    mem = await asyncio.to_thread(_maybe_inject_memory, agent)
+    return _content(_status(agent) + mem, _render(agent.frames[-1]))
 
 
 @server.tool
@@ -238,7 +403,10 @@ async def act(actions: str, reasoning: str = "") -> list:
     if not tokens:
         return _content("No valid actions. Use ACTION1..ACTION7, ACTION6(x,y), RESET.")
 
+    before = agent.frames[-1] if agent.frames else None
+    before_grid = before.frame[-1] if (before and before.frame) else None
     log: list[str] = []
+    steps: list[dict[str, Any]] = []
     for name, x, y in tokens[:12]:
         if not _session["thread"].is_alive():
             log.append("game loop finished")
@@ -273,6 +441,8 @@ async def act(actions: str, reasoning: str = "") -> list:
             break
         note = f"{name}" + (f"({x},{y})" if name == "ACTION6" and x else "")
         log.append(f"{note} -> levels={result.levels_completed} state={result.state.name}")
+        steps.append({"action": note, "levels": result.levels_completed,
+                      "state": result.state.name})
         if result.state is GameState.WIN:
             log.append("WIN: all levels complete")
             break
@@ -283,7 +453,18 @@ async def act(actions: str, reasoning: str = "") -> list:
             log.append("action budget exhausted")
             break
 
-    return _content("\n".join(log) + "\n" + _status(agent), _render(agent.frames[-1]))
+    _trace({
+        "kind": "act",
+        "action_counter": agent.action_counter,
+        "scene_before": _scene_of(before),
+        "actions": actions,
+        "reasoning": reasoning,
+        "steps": steps,
+        "scene_after": _scene_of(agent.frames[-1] if agent.frames else None,
+                                 before_grid, action=actions),
+    })
+    mem = await asyncio.to_thread(_maybe_inject_memory, agent)
+    return _content("\n".join(log) + "\n" + _status(agent) + mem, _render(agent.frames[-1]))
 
 
 # ─── the HUD environment ───────────────────────────────────────────────
@@ -342,7 +523,10 @@ async def play(game_id: str = "ls20-9607627b", scorecard_id: str = "",
     _start_session(game_id, scorecard_id or None, max_actions)
     agent: HudBridgeAgent = _session["agent"]
     first = agent.frames[-1]
-    answer = yield (
+    _trace({"kind": "start", "game_id": game_id, "win_levels": first.win_levels,
+            "max_actions": max_actions, "mem_model_on": _MEM_MODEL_ON,
+            "stm_tag_env": os.environ.get("ARC_STM_TAG"), "scene": _scene_of(first)})
+    prompt = (
         f"You are playing an unknown ARC-AGI-3 grid game (id: {game_id}) on the "
         f"official Arc Prize runner. It has {first.win_levels or '?'} levels; "
         "complete as many as you can.\n\n"
@@ -361,6 +545,8 @@ async def play(game_id: str = "ls20-9607627b", scorecard_id: str = "",
         "limit). Batch several actions per act() call. Start with look(). When "
         "done or out of budget, reply with a short summary of the game's rules."
     )
+    answer = yield prompt + _memory_suffix(game_id)
+    trace_path = _session.get("trace") if (_TRACE_ON and _session) else None
     last = _finish_session()
     # Official scoring: per-game entries materialize when the card closes. We
     # close the card we opened; a runner-supplied card is closed by the runner,
@@ -390,4 +576,10 @@ async def play(game_id: str = "ls20-9607627b", scorecard_id: str = "",
                 )
         except Exception as exc:
             logger.warning("scorecard close failed (%s); using frame-based reward", exc)
+    # Persist the agent's rulebook keyed on this attempt's reward (ratchet:
+    # only replaces the stored rulebook when this attempt did as well or better).
+    if isinstance(answer, str):
+        _write_memory(game_id, answer, reward)
+    _trace_write(trace_path, {"kind": "end", "game_id": game_id, "reward": reward,
+                              "answer": answer if isinstance(answer, str) else None})
     yield reward
