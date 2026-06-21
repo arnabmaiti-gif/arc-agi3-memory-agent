@@ -11,7 +11,7 @@ import html
 import json
 from pathlib import Path
 
-from report_v2 import PALETTE, _examples, _mem_instances, _real_grid
+from report_v2 import PALETTE, _examples, _mem_instances, _real_grid, workflow_svg
 
 _DIR = Path(__file__).resolve().parent
 
@@ -27,7 +27,10 @@ def main() -> None:
     after_grid = json.dumps(cd["after"]["grid"]) if cd else json.dumps(grid)
     note = html.escape(cd["note"]) if cd else "if a move only changes non-player tiles, it's a wall — switch direction."
 
-    page = f"""<title>Memory for ARC-AGI-3 — pitch</title>
+    page = f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memory for ARC-AGI-3 — pitch</title>
 <style>
   :root {{
     --ground:#0E1526; --panel:#141d31; --line:#243049; --text:#E6E9F0; --dim:#8d9bb5;
@@ -77,7 +80,8 @@ def main() -> None:
   .count {{ position:fixed; top:22px; right:28px; font-family:var(--mono); font-size:13px; color:var(--dim); }}
   .hint {{ position:fixed; bottom:20px; right:28px; font-family:var(--mono); font-size:12px; color:var(--dim); }}
 </style>
-
+</head>
+<body>
 <div class="count"><span id="cur">1</span> / 6</div>
 
 <section class="slide on">
@@ -109,9 +113,9 @@ def main() -> None:
       <p class="sub" style="margin-bottom:14px">A frozen Claude policy navigates the image. The memory keys off a
       deterministic object+delta encoding — a shared vocabulary so lessons transfer across games.</p>
       <div class="card">
-        <span class="tag stm">STM 1.7B · this level</span>
+        <span class="tag stm">short-term memory · 1.7B · this level</span>
         <p style="margin:0 0 12px;font-size:15px">{html.escape(casc['nuance'])}</p>
-        <span class="tag ltm">LTM 4B · transferable note</span>
+        <span class="tag ltm">long-term memory · 4B · transferable note</span>
         <p style="margin:0;font-size:15px">{html.escape(casc['note'])}</p>
       </div>
     </div>
@@ -123,11 +127,7 @@ def main() -> None:
   <h2>Reward is sparse. <span class="v">Experience is rich.</span></h2>
   <p class="sub">A GPT-5.2 teacher retrospects each play-through in natural language — "you re-tried a blocked move;
   here's the rule" — and that hindsight is compiled into LoRA weights the memory recalls.</p>
-  <div class="flow">
-    <span>play <b>(Claude)</b></span><i>→</i><span>trace</span><i>→</i>
-    <span>hindsight <b>(GPT-5.2)</b></span><i>→</i><span><b>scene→note</b> data</span><i>→</i>
-    <span>LoRA SFT <b>(Modal)</b></span><i>→</i><span>serve + inject</span><i>↺</i>
-  </div>
+  <div style="margin-top:30px;max-width:980px">{workflow_svg()}</div>
 </section>
 
 <section class="slide">
@@ -157,7 +157,7 @@ def main() -> None:
   recall into a new plan) and a <b>fine-tunable policy</b> — we can only <i>inform</i> a closed model, not retrain
   its reasoning. That's the next frontier.</p>
   <div class="links" style="margin-top:24px">
-    demo &nbsp;<a href="https://claude.ai/code/artifact/ec59f432-dea7-4265-98b8-04032891a89d">claude.ai/code/artifact/…</a><br>
+    demo &nbsp;<a href="https://arnabmaiti-gif.github.io/arc-agi3-memory-agent/">arnabmaiti-gif.github.io/arc-agi3-memory-agent</a><br>
     code &nbsp;<a href="https://github.com/arnabmaiti-gif/arc-agi3-memory-agent">github.com/arnabmaiti-gif/arc-agi3-memory-agent</a>
   </div>
 </section>
@@ -196,6 +196,7 @@ def main() -> None:
     else if (e.key === 'ArrowLeft') {{ go(cur-1); }}
   }});
 </script>
+</body></html>
 """
     out = _DIR / "slides.html"
     out.write_text(page)

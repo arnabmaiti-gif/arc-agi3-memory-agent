@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memory for ARC-AGI-3 — self-improving agent</title>
+<style>
+  :root {
+    --ground:#0E1526; --panel:#141d31; --line:#243049; --text:#E6E9F0; --dim:#8d9bb5;
+    --blue:#0074D9; --green:#2ECC40; --violet:#7c5cff;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:
+      radial-gradient(900px 500px at 80% -10%, rgba(124,92,255,.14), transparent 60%),
+      var(--ground); color:var(--text); font-family:var(--sans);
+      display:flex; align-items:center; justify-content:center; padding:8vh 7vw; }
+  .wrap { max-width:760px; width:100%; }
+  .eyebrow { font-family:var(--mono); font-size:13px; letter-spacing:.22em; text-transform:uppercase;
+      color:var(--blue); margin:0 0 18px; }
+  h1 { font-size:clamp(30px,5.2vw,52px); line-height:1.05; letter-spacing:-.02em; margin:0 0 16px; font-weight:800; }
+  h1 .v { color:var(--violet); }
+  p.sub { font-size:clamp(16px,2vw,19px); color:#c6cfe0; max-width:54ch; margin:0 0 36px; line-height:1.5; }
+  .cards { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media(max-width:620px){ .cards { grid-template-columns:1fr; } }
+  a.card { display:block; text-decoration:none; background:var(--panel); border:1px solid var(--line);
+      border-radius:16px; padding:22px 22px 20px; transition:border-color .15s, transform .15s; }
+  a.card:hover { transform:translateY(-2px); }
+  a.card.demo:hover { border-color:var(--green); }
+  a.card.deck:hover { border-color:var(--violet); }
+  a.card .ico { font-size:26px; }
+  a.card b { display:block; color:var(--text); font-size:20px; margin:10px 0 4px; font-weight:750; }
+  a.card span { color:var(--dim); font-size:14px; line-height:1.45; }
+  a.card .go { display:inline-block; margin-top:12px; font-family:var(--mono); font-size:13px; }
+  a.card.demo .go { color:var(--green); }
+  a.card.deck .go { color:var(--violet); }
+  .repo { margin-top:26px; font-family:var(--mono); font-size:14px; }
+  .repo a { color:var(--dim); }
+  .repo a:hover { color:var(--text); }
+  footer { margin-top:30px; color:var(--dim); font-family:var(--mono); font-size:12px; line-height:1.7; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">HUD × YC · Frontier RSI Environments</p>
+  <h1>Agents that learn the way we do — by <span class="v">remembering</span>.</h1>
+  <p class="sub">A self-improving <b>parametric memory</b> for ARC-AGI-3. The agent distills its own play into
+  weights — a short-term and a long-term memory — and recalls the right lesson conditioned on what it sees.</p>
+  <div class="cards">
+    <a class="card demo" href="report.html">
+      <div class="ico">🧠</div>
+      <b>Walkthrough</b>
+      <span>The thesis, the architecture, and real cascades — with the board → note contrast.</span>
+      <span class="go">open the demo →</span>
+    </a>
+    <a class="card deck" href="slides.html">
+      <div class="ico">🎞️</div>
+      <b>Pitch deck</b>
+      <span>Six slides. Navigate with ← / → / space.</span>
+      <span class="go">open the deck →</span>
+    </a>
+  </div>
+  <p class="repo">code &nbsp;<a href="https://github.com/arnabmaiti-gif/arc-agi3-memory-agent">github.com/arnabmaiti-gif/arc-agi3-memory-agent</a></p>
+  <footer>Frozen Claude policy · GPT-5.2 hindsight teacher · Qwen3 1.7B/4B LoRA on Modal.</footer>
+</div>
+</body></html>

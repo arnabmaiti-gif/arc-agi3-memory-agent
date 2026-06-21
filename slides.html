@@ -1,3 +1,6 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Memory for ARC-AGI-3 — pitch</title>
 <style>
   :root {
@@ -48,7 +51,8 @@
   .count { position:fixed; top:22px; right:28px; font-family:var(--mono); font-size:13px; color:var(--dim); }
   .hint { position:fixed; bottom:20px; right:28px; font-family:var(--mono); font-size:12px; color:var(--dim); }
 </style>
-
+</head>
+<body>
 <div class="count"><span id="cur">1</span> / 6</div>
 
 <section class="slide on">
@@ -80,9 +84,9 @@
       <p class="sub" style="margin-bottom:14px">A frozen Claude policy navigates the image. The memory keys off a
       deterministic object+delta encoding — a shared vocabulary so lessons transfer across games.</p>
       <div class="card">
-        <span class="tag stm">STM 1.7B · this level</span>
+        <span class="tag stm">short-term memory · 1.7B · this level</span>
         <p style="margin:0 0 12px;font-size:15px">At step 15, a large section of the bottom strip flips green-&gt;navy (66 cells in bbox(18,61)-(50,62)) during a long 10-move sequence, indicating a move-budget/progress meter that advances even on non-solution moves; in the next attempt, avoid long detours like step 15 until you’ve proven they change your ability to reach the goal (prioritize the short macros from steps 4/8/9/10).</p>
-        <span class="tag ltm">LTM 4B · transferable note</span>
+        <span class="tag ltm">long-term memory · 4B · transferable note</span>
         <p style="margin:0;font-size:15px">Treat any steadily filling UI bar as a hard move budget: prefer short, repeatable macros and cut off experiments early if they don’t unlock new reachable tiles.</p>
       </div>
     </div>
@@ -94,11 +98,7 @@
   <h2>Reward is sparse. <span class="v">Experience is rich.</span></h2>
   <p class="sub">A GPT-5.2 teacher retrospects each play-through in natural language — "you re-tried a blocked move;
   here's the rule" — and that hindsight is compiled into LoRA weights the memory recalls.</p>
-  <div class="flow">
-    <span>play <b>(Claude)</b></span><i>→</i><span>trace</span><i>→</i>
-    <span>hindsight <b>(GPT-5.2)</b></span><i>→</i><span><b>scene→note</b> data</span><i>→</i>
-    <span>LoRA SFT <b>(Modal)</b></span><i>→</i><span>serve + inject</span><i>↺</i>
-  </div>
+  <div style="margin-top:30px;max-width:980px"><svg viewBox="0 0 960 184" width="100%" style="max-width:960px" role="img" aria-label="RSI workflow"><defs><marker id="ah" markerWidth="8" markerHeight="8" refX="6.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#0074D9"/></marker><marker id="ah2" markerWidth="8" markerHeight="8" refX="6.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#7c5cff"/></marker></defs><path d="M 880 92 C 880 26, 80 26, 80 92" fill="none" stroke="#7c5cff" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ah2)"/><text x="480" y="20" text-anchor="middle" fill="#b9a6ff" font-family="monospace" font-size="11">self-improvement loop — the agent learns from its own play</text><line x1="146" y1="128.0" x2="174" y2="128.0" stroke="#0074D9" stroke-width="2" marker-end="url(#ah)"/><line x1="306" y1="128.0" x2="334" y2="128.0" stroke="#0074D9" stroke-width="2" marker-end="url(#ah)"/><line x1="466" y1="128.0" x2="494" y2="128.0" stroke="#0074D9" stroke-width="2" marker-end="url(#ah)"/><line x1="626" y1="128.0" x2="654" y2="128.0" stroke="#0074D9" stroke-width="2" marker-end="url(#ah)"/><line x1="786" y1="128.0" x2="814" y2="128.0" stroke="#0074D9" stroke-width="2" marker-end="url(#ah)"/><rect x="14" y="92" width="132" height="72" rx="12" fill="#141d31" stroke="#2c3a57"/><text x="80" y="114" text-anchor="middle" fill="#7fb6ff" font-family="monospace" font-size="11">1</text><text x="80" y="134" text-anchor="middle" fill="#E6E9F0" font-size="14" font-weight="700">Play</text><text x="80" y="151" text-anchor="middle" fill="#8d9bb5" font-family="monospace" font-size="9">Claude policy</text><rect x="174" y="92" width="132" height="72" rx="12" fill="#141d31" stroke="#2c3a57"/><text x="240" y="114" text-anchor="middle" fill="#7fb6ff" font-family="monospace" font-size="11">2</text><text x="240" y="134" text-anchor="middle" fill="#E6E9F0" font-size="14" font-weight="700">Trace</text><text x="240" y="151" text-anchor="middle" fill="#8d9bb5" font-family="monospace" font-size="9">scene · action · reasoning</text><rect x="334" y="92" width="132" height="72" rx="12" fill="#141d31" stroke="#2c3a57"/><text x="400" y="114" text-anchor="middle" fill="#7fb6ff" font-family="monospace" font-size="11">3</text><text x="400" y="134" text-anchor="middle" fill="#E6E9F0" font-size="14" font-weight="700">Retrospect</text><text x="400" y="151" text-anchor="middle" fill="#8d9bb5" font-family="monospace" font-size="9">GPT-5.2 hindsight</text><rect x="494" y="92" width="132" height="72" rx="12" fill="#141d31" stroke="#2c3a57"/><text x="560" y="114" text-anchor="middle" fill="#7fb6ff" font-family="monospace" font-size="11">4</text><text x="560" y="134" text-anchor="middle" fill="#E6E9F0" font-size="14" font-weight="700">Dataset</text><text x="560" y="151" text-anchor="middle" fill="#8d9bb5" font-family="monospace" font-size="9">scene → note</text><rect x="654" y="92" width="132" height="72" rx="12" fill="#141d31" stroke="#2c3a57"/><text x="720" y="114" text-anchor="middle" fill="#7fb6ff" font-family="monospace" font-size="11">5</text><text x="720" y="134" text-anchor="middle" fill="#E6E9F0" font-size="14" font-weight="700">Train LoRA</text><text x="720" y="151" text-anchor="middle" fill="#8d9bb5" font-family="monospace" font-size="9">STM + LTM · Modal</text><rect x="814" y="92" width="132" height="72" rx="12" fill="#141d31" stroke="#2c3a57"/><text x="880" y="114" text-anchor="middle" fill="#7fb6ff" font-family="monospace" font-size="11">6</text><text x="880" y="134" text-anchor="middle" fill="#E6E9F0" font-size="14" font-weight="700">Serve + inject</text><text x="880" y="151" text-anchor="middle" fill="#8d9bb5" font-family="monospace" font-size="9">per-step note</text></svg></div>
 </section>
 
 <section class="slide">
@@ -128,7 +128,7 @@
   recall into a new plan) and a <b>fine-tunable policy</b> — we can only <i>inform</i> a closed model, not retrain
   its reasoning. That's the next frontier.</p>
   <div class="links" style="margin-top:24px">
-    demo &nbsp;<a href="https://claude.ai/code/artifact/ec59f432-dea7-4265-98b8-04032891a89d">claude.ai/code/artifact/…</a><br>
+    demo &nbsp;<a href="https://arnabmaiti-gif.github.io/arc-agi3-memory-agent/">arnabmaiti-gif.github.io/arc-agi3-memory-agent</a><br>
     code &nbsp;<a href="https://github.com/arnabmaiti-gif/arc-agi3-memory-agent">github.com/arnabmaiti-gif/arc-agi3-memory-agent</a>
   </div>
 </section>
@@ -167,3 +167,4 @@
     else if (e.key === 'ArrowLeft') { go(cur-1); }
   });
 </script>
+</body></html>

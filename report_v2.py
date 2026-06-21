@@ -61,6 +61,40 @@ def _mem_instances() -> list:
     return json.loads(p.read_text()) if p.exists() else []
 
 
+def workflow_svg() -> str:
+    """Pictorial RSI workflow: a 6-stage pipeline + a dashed self-improvement loop."""
+    stages = [
+        ("1", "Play", "Claude policy"), ("2", "Trace", "scene · action · reasoning"),
+        ("3", "Retrospect", "GPT-5.2 hindsight"), ("4", "Dataset", "scene → note"),
+        ("5", "Train LoRA", "STM + LTM · Modal"), ("6", "Serve + inject", "per-step note"),
+    ]
+    W, bw, bh, y, x0 = 960, 132, 72, 92, 14
+    n = len(stages)
+    gap = (W - 2 * x0 - n * bw) / (n - 1)
+    boxes = arrows = ""
+    for i, (num, t, sub) in enumerate(stages):
+        x = x0 + i * (bw + gap)
+        boxes += (
+            f'<rect x="{x:.0f}" y="{y}" width="{bw}" height="{bh}" rx="12" fill="#141d31" stroke="#2c3a57"/>'
+            f'<text x="{x+bw/2:.0f}" y="{y+22}" text-anchor="middle" fill="#7fb6ff" font-family="monospace" font-size="11">{num}</text>'
+            f'<text x="{x+bw/2:.0f}" y="{y+42}" text-anchor="middle" fill="#E6E9F0" font-size="14" font-weight="700">{t}</text>'
+            f'<text x="{x+bw/2:.0f}" y="{y+59}" text-anchor="middle" fill="#8d9bb5" font-family="monospace" font-size="9">{sub}</text>')
+        if i < n - 1:
+            ax = x + bw
+            arrows += f'<line x1="{ax:.0f}" y1="{y+bh/2}" x2="{ax+gap:.0f}" y2="{y+bh/2}" stroke="#0074D9" stroke-width="2" marker-end="url(#ah)"/>'
+    lx = x0 + (n - 1) * (bw + gap) + bw / 2
+    fx = x0 + bw / 2
+    loop = (
+        f'<path d="M {lx:.0f} {y} C {lx:.0f} 26, {fx:.0f} 26, {fx:.0f} {y}" fill="none" stroke="#7c5cff" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ah2)"/>'
+        f'<text x="{(fx+lx)/2:.0f}" y="20" text-anchor="middle" fill="#b9a6ff" font-family="monospace" font-size="11">self-improvement loop — the agent learns from its own play</text>')
+    return (
+        f'<svg viewBox="0 0 {W} 184" width="100%" style="max-width:{W}px" role="img" aria-label="RSI workflow">'
+        '<defs>'
+        '<marker id="ah" markerWidth="8" markerHeight="8" refX="6.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#0074D9"/></marker>'
+        '<marker id="ah2" markerWidth="8" markerHeight="8" refX="6.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#7c5cff"/></marker>'
+        f'</defs>{loop}{arrows}{boxes}</svg>')
+
+
 def main() -> None:
     grid = _real_grid()
     scene = _scene_text()
@@ -72,9 +106,9 @@ def main() -> None:
     for e in exs:
         casc += f"""
       <div class="casc">
-        <div class="casc-row"><span class="tag stm">STM · what's true on this level</span><p>{html.escape(e['nuance'])}</p></div>
-        <div class="casc-arrow">scene + nuance → LTM ↓</div>
-        <div class="casc-row"><span class="tag ltm">LTM · transferable note (injected)</span><p>{html.escape(e['note'])}</p></div>
+        <div class="casc-row"><span class="tag stm">short-term memory · what's true on this level</span><p>{html.escape(e['nuance'])}</p></div>
+        <div class="casc-arrow">scene + nuance → long-term memory ↓</div>
+        <div class="casc-row"><span class="tag ltm">long-term memory · transferable note (injected)</span><p>{html.escape(e['note'])}</p></div>
       </div>"""
 
     # before -> after contrast: two real boards + the real in-game move-budget bar
@@ -105,7 +139,10 @@ def main() -> None:
     else:
         contrast, cgrids = '<p class="dim">(contrast pending)</p>', ""
 
-    page = f"""<title>Memory for ARC-AGI-3 · learning from experience</title>
+    page = f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memory for ARC-AGI-3 · learning from experience</title>
 <style>
   :root {{
     --ground:#0E1526; --panel:#141d31; --line:#243049; --text:#E6E9F0; --dim:#8d9bb5;
@@ -160,7 +197,8 @@ def main() -> None:
   footer {{ padding:40px 0 70px; color:var(--dim); font-family:var(--mono); font-size:12px; }}
   b.k {{ color:var(--green); }}
 </style>
-
+</head>
+<body>
 <div class="wrap">
   <header class="hero">
     <p class="eyebrow">HUD × YC · Frontier RSI Environments</p>
@@ -207,18 +245,16 @@ def main() -> None:
         <canvas id="grid" width="64" height="64" aria-label="ARC-AGI-3 grid"></canvas></div>
       <div class="panel"><h3>memory input — scene.py encoding</h3><pre>{html.escape(scene)}</pre></div>
     </div>
-    <h2 style="margin-top:38px">Two tiers, episodic → semantic</h2>
-    <p class="lede">A <b>Qwen3-1.7B STM</b> recalls this level's specifics; a <b>Qwen3-4B LTM</b> turns scene +
-    nuance into a transferable instruction. Real cascades the agent learned and was handed back:</p>
+    <h2 style="margin-top:38px">Two tiers: short-term and long-term memory</h2>
+    <p class="lede">A 1.7B <b>short-term memory</b> (STM) recalls <i>this level's</i> specifics; a 4B
+    <b>long-term memory</b> (LTM) turns scene + nuance into a transferable instruction — episodic → semantic,
+    the way the hippocampus consolidates into neocortex. Real cascades the agent learned and was handed back:</p>
     {casc}
     <h2 style="margin-top:38px">Training: hindsight, distilled into weights</h2>
     <p class="lede">Reward is sparse, but experience is rich. A GPT-5.2 teacher retrospects each play-through in
-    natural language and compiles it into LoRA weights the memory recalls — RSI through memory, not reward.</p>
-    <div class="flow">
-      <span>play <b>(Claude)</b></span><i>→</i><span>trace scene+action+reasoning</span><i>→</i>
-      <span>retrospect <b>(GPT-5.2)</b></span><i>→</i><span><b>scene→note</b> data</span><i>→</i>
-      <span>LoRA SFT <b>(Modal)</b></span><i>→</i><span>serve + inject</span><i>↺</i>
-    </div>
+    natural language, that hindsight becomes scene→note data, and it's compiled into the LoRA weights the
+    memory recalls — self-improvement through memory, not reward. The whole pipeline is a loop:</p>
+    {workflow_svg()}
   </section>
 
   <section>
@@ -227,7 +263,7 @@ def main() -> None:
     <p class="lede">The engineering challenge was getting the memory to surface correct, scene-relevant knowledge
     from past play. It does, reliably:</p>
     <ul class="clean">
-      <li>The <b>STM→LTM cascade</b> turns a concrete level observation into transferable, grounded guidance
+      <li>The <b>short-term → long-term memory cascade</b> turns a concrete level observation into transferable, grounded guidance
       (the examples above are verbatim from the trained models).</li>
       <li>It's <b>scene-retrieved and parametric</b> — for novel states relevance ≠ text similarity, so a small
       model <i>learns</i> the scene→knowledge mapping rather than matching strings.</li>
@@ -269,6 +305,7 @@ def main() -> None:
   paint('grid', {json.dumps(grid)});
   {cgrids}
 </script>
+</body></html>
 """
     out = _DIR / "report.html"
     out.write_text(page)
