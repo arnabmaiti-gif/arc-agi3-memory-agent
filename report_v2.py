@@ -128,8 +128,8 @@ def main() -> None:
           <span class="tag ltm">2 · with memory</span>
           <canvas id="cafter" width="64" height="64"></canvas>
           <div class="budget">move budget left<div class="bar"><i style="width:{cd['after']['budget']}%"></i></div></div>
-          <p>Same board. Handed the note below, it <b>switches direction</b> — the player block moves down
-          through the opening into the room, with most of its budget still to spend.</p>
+          <p>Same board. Handed the note below, it <b>switches direction</b> — the player block leaves the shaft
+          through the opening and navigates into the room, with most of its budget still to spend.</p>
         </div>
       </div>
       <div class="note-box" style="margin-top:6px"><span class="tag ltm">the note memory injected</span>

@@ -26,6 +26,14 @@ def main() -> None:
     before_grid = json.dumps(cd["before"]["grid"]) if cd else json.dumps(grid)
     after_grid = json.dumps(cd["after"]["grid"]) if cd else json.dumps(grid)
     note = html.escape(cd["note"]) if cd else "if a move only changes non-player tiles, it's a wall — switch direction."
+    before_budget = cd["before"]["budget"] if cd else 16
+    after_budget = cd["after"]["budget"] if cd else 88
+
+    def budget_bar(pct: int) -> str:
+        return (f'<div style="font-family:var(--mono);font-size:12px;color:var(--dim);max-width:200px;margin:6px auto 0">'
+                f'move budget left'
+                f'<div style="height:9px;background:var(--line);border-radius:5px;overflow:hidden;margin-top:4px">'
+                f'<i style="display:block;height:100%;width:{pct}%;background:var(--yellow)"></i></div></div>')
 
     page = f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -138,13 +146,15 @@ def main() -> None:
     <div style="text-align:center">
       <span class="tag no">1 · without memory</span>
       <canvas id="g2" width="64" height="64" style="display:block;margin:10px auto"></canvas>
+      {budget_bar(before_budget)}
       <p class="sub" style="font-size:14px;max-width:230px">re-issues the blocked move; the player never leaves the shaft</p>
     </div>
-    <div style="font-size:34px;color:var(--violet);padding-bottom:60px">→</div>
+    <div style="font-size:34px;color:var(--violet);padding-bottom:80px">→</div>
     <div style="text-align:center">
       <span class="tag ltm">2 · with memory</span>
       <canvas id="g3" width="64" height="64" style="display:block;margin:10px auto"></canvas>
-      <p class="sub" style="font-size:14px;max-width:230px">switches direction; the player moves down into the room</p>
+      {budget_bar(after_budget)}
+      <p class="sub" style="font-size:14px;max-width:230px">switches direction; the player navigates into the room</p>
     </div>
   </div>
   <div class="note-box" style="margin-top:18px;max-width:62ch"><span class="tag ltm">the injected note</span>
