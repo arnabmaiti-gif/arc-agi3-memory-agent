@@ -4,17 +4,14 @@
 
 | Field | Link |
 |---|---|
-| **Demo URL** (required) | https://claude.ai/code/artifact/ec59f432-dea7-4265-98b8-04032891a89d |
+| **Demo URL** (required) | https://arnabmaiti-gif.github.io/arc-agi3-memory-agent/ |
 | **GitHub repo** (required) | https://github.com/arnabmaiti-gif/arc-agi3-memory-agent |
-| Video / slides | optional |
+| Pitch deck | https://arnabmaiti-gif.github.io/arc-agi3-memory-agent/slides.html |
 
-**Before submitting:** the repo is **private** — make it public (or add the
-judges) so the link opens for them:
-```
-gh repo edit arnabmaiti-gif/arc-agi3-memory-agent --visibility public --accept-visibility-change-consequences
-```
-The demo URL is a private Claude Artifact — open it and use **Share** to make it
-viewable, or it may already be shareable via the link.
+The demo and deck are hosted on **GitHub Pages** — public, no sign-in needed
+(the repo is already public). Direct links:
+- Walkthrough: `…/report.html`
+- Pitch deck: `…/slides.html` (← / → / space to navigate)
 
 ## One-paragraph pitch
 
