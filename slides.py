@@ -85,10 +85,11 @@ def main() -> None:
 <div class="count"><span id="cur">1</span> / 6</div>
 
 <section class="slide on">
-  <p class="eyebrow">HUD × YC · Frontier RSI Environments</p>
+  <p class="eyebrow">HUD × YC · Frontier Recursive Self-Improvement Environments</p>
   <h1>Agents that learn the way we do —<br>by <span class="v">remembering</span>.</h1>
   <p class="sub">A self-improving <b class="k">parametric memory</b> for ARC-AGI-3. The agent distills its own
-  play into weights and recalls the right lesson, conditioned on what it sees — RSI through memory, not reward.</p>
+  play into weights and recalls the right lesson, conditioned on what it sees — <b>recursive self-improvement</b>
+  through memory, not reward.</p>
 </section>
 
 <section class="slide">
@@ -132,18 +133,18 @@ def main() -> None:
 
 <section class="slide">
   <p class="eyebrow">// it works</p>
-  <h2>Same game. What it <span class="v">remembers</span> changes the move.</h2>
+  <h2>Same level. What it <span class="v">remembers</span> changes the move.</h2>
   <div class="row" style="align-items:flex-end;gap:22px">
     <div style="text-align:center">
       <span class="tag no">1 · without memory</span>
       <canvas id="g2" width="64" height="64" style="display:block;margin:10px auto"></canvas>
-      <p class="sub" style="font-size:14px;max-width:230px">re-tries a blocked move and stalls near the start</p>
+      <p class="sub" style="font-size:14px;max-width:230px">re-issues the blocked move; the player never leaves the shaft</p>
     </div>
     <div style="font-size:34px;color:var(--violet);padding-bottom:60px">→</div>
     <div style="text-align:center">
       <span class="tag ltm">2 · with memory</span>
       <canvas id="g3" width="64" height="64" style="display:block;margin:10px auto"></canvas>
-      <p class="sub" style="font-size:14px;max-width:230px">switches direction; the player climbs toward the exit</p>
+      <p class="sub" style="font-size:14px;max-width:230px">switches direction; the player moves down into the room</p>
     </div>
   </div>
   <div class="note-box" style="margin-top:18px;max-width:62ch"><span class="tag ltm">the injected note</span>

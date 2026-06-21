@@ -88,7 +88,7 @@ def workflow_svg() -> str:
         f'<path d="M {lx:.0f} {y} C {lx:.0f} 26, {fx:.0f} 26, {fx:.0f} {y}" fill="none" stroke="#7c5cff" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ah2)"/>'
         f'<text x="{(fx+lx)/2:.0f}" y="20" text-anchor="middle" fill="#b9a6ff" font-family="monospace" font-size="11">self-improvement loop — the agent learns from its own play</text>')
     return (
-        f'<svg viewBox="0 0 {W} 184" width="100%" style="max-width:{W}px" role="img" aria-label="RSI workflow">'
+        f'<svg viewBox="0 0 {W} 184" width="100%" style="max-width:{W}px" role="img" aria-label="recursive self-improvement workflow">'
         '<defs>'
         '<marker id="ah" markerWidth="8" markerHeight="8" refX="6.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#0074D9"/></marker>'
         '<marker id="ah2" markerWidth="8" markerHeight="8" refX="6.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#7c5cff"/></marker>'
@@ -120,16 +120,16 @@ def main() -> None:
         <div class="cside">
           <span class="tag no">1 · without memory</span>
           <canvas id="cbefore" width="64" height="64"></canvas>
-          <div class="budget">move budget<div class="bar"><i style="width:{cd['before']['budget']}%"></i></div></div>
-          <p>With no record of past attempts, the agent re-tries a move that's blocked and stalls near the
-          start — spending actions with no progress.</p>
+          <div class="budget">move budget left<div class="bar"><i style="width:{cd['before']['budget']}%"></i></div></div>
+          <p>The player sits in a shaft walled in on top. With no record of past attempts, the agent keeps
+          re-issuing the same blocked move — never leaves the start, and drains its move budget.</p>
         </div>
         <div class="cside">
           <span class="tag ltm">2 · with memory</span>
           <canvas id="cafter" width="64" height="64"></canvas>
-          <div class="budget">move budget<div class="bar"><i style="width:{cd['after']['budget']}%"></i></div></div>
-          <p>Handed the note below, it <b>switches direction</b> and climbs toward the exit — the player block
-          has moved up the board.</p>
+          <div class="budget">move budget left<div class="bar"><i style="width:{cd['after']['budget']}%"></i></div></div>
+          <p>Same board. Handed the note below, it <b>switches direction</b> — the player block moves down
+          through the opening into the room, with most of its budget still to spend.</p>
         </div>
       </div>
       <div class="note-box" style="margin-top:6px"><span class="tag ltm">the note memory injected</span>
@@ -229,9 +229,9 @@ def main() -> None:
   <section>
     <p class="eyebrow">// 02 — why memory matters</p>
     <h2>Same board. What the agent <i>remembers</i> changes everything.</h2>
-    <p class="lede">Two real boards. <b>(1)</b> Without memory the agent re-tries a blocked move and stalls
-    near the start. <b>(2)</b> With memory — handed the lesson from past play — it switches direction and the
-    player climbs toward the exit.</p>
+    <p class="lede">The <i>same level</i>, side by side — the only difference is the move the agent makes.
+    <b>(1)</b> Without memory it re-tries a blocked move and stalls near the start. <b>(2)</b> With memory —
+    handed the lesson from past play — it switches direction and the player moves through into the room.</p>
     {contrast}
   </section>
 
