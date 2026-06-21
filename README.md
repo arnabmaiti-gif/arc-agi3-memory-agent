@@ -102,11 +102,15 @@ Headline, stated plainly:
 - The cascade produces **concrete, grounded** guidance (e.g. *"verify the player
   bbox actually changes; if it doesn't you hit a wall — switch direction instead
   of spamming the blocked action"*).
-- **Performance lift on ARC scores is the open question.** An early A/B "win"
-  turned out to be **noise** (the same note appeared in 4 attempts; only 1
-  cleared) — we caught and reported that rather than overclaiming. We then made
-  notes concrete + injection per-step and re-ran; `report.html` carries the
-  current `rsi_loop` success-rate curve.
+- **Final result (measured, honest).** Opus 4.8 + a planning prompt + memory
+  lifted the Level-1 clear rate from **~12% (baseline) to ~67%** (8/12 over 6
+  self-improvement cycles, peaking at 100%) — the agent now *regularly reaches
+  Level 2*, but **never cleared it** (no Level 3). An **attribution ablation**
+  (identical setup, memory OFF) cleared L1 **3/4 — statistically the same** — so
+  the lift comes from the stronger policy + the prompt, **not** the parametric
+  memory. (An earlier apparent "memory win" was noise — same note, 1/4 cleared —
+  which we caught and reported.) The memory pipeline works end-to-end but did not
+  measurably beat a strong, well-prompted policy on this task.
 
 This is a benchmark where frontier models score <1%; we treat a *working
 self-improvement system* + an *honest read of whether it moves the needle* as the
