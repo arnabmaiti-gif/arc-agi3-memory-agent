@@ -161,6 +161,10 @@
       mistakes, not raw perception.</li>
       <li>The memory is <b>parametric and scene-retrieved</b> — for novel states, relevance ≠ text similarity,
       so a small model <i>learns</i> the scene→knowledge mapping.</li>
+      <li>We even gave the agent an explicit <b>BFS pathfinder + ASCII map</b> (agent does semantics, tool does
+      search) — it used the tool ~5×/attempt with correct coordinates, yet <b>Level-2 clear stayed 0/4</b>. So
+      L2 isn't a pure-navigation wall: the agent reaches L2 and moves freely but can't solve it in budget —
+      a mechanic/precision barrier, not geometric search.</li>
     </ul>
   </section>
 
