@@ -206,7 +206,9 @@ def _maybe_inject_memory(agent: "HudBridgeAgent") -> str:
             return ""  # unchanged since last surfaced — don't repeat it
         _session["last_note"] = note
         _trace({"kind": "memory", "stm_tag": stm_tag,
-                "nuance": res.get("nuance"), "note": note})
+                "nuance": res.get("nuance"), "note": note,
+                "grid": (agent.frames[-1].frame[-1]
+                         if agent.frames and agent.frames[-1].frame else None)})
         block = "\n\n[MEMORY — hint from past attempts at this game; verify against what you see]\n"
         if res.get("nuance"):
             block += f"- noticed: {res['nuance']}\n"

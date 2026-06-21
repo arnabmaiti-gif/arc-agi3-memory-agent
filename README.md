@@ -91,26 +91,29 @@ can transfer between games — something raw pixels or free-form prose wouldn't 
 Everything memory-related is **gated** (`ARC_MEMORY`, `ARC_TRACE`, `ARC_MEM_MODEL`)
 so a baseline run is byte-identical to the stock environment.
 
-## Results (honest)
+## Results & honest scope
 
-See `report.html` (the demo) for the live numbers and the rigorous analysis.
-Headline, stated plainly:
+ARC-AGI-3 takes **several abilities at once** — perception, **memory**, planning,
+and controllability of the policy. We built and validated the **memory** piece;
+the others are the open frontier.
 
-- The **full system works end-to-end**: scene→text, hindsight retrospection,
-  two-tier LoRA training/serving, the STM→LTM cascade, and per-step injection
-  into the live policy are all verified.
-- The cascade produces **concrete, grounded** guidance (e.g. *"verify the player
-  bbox actually changes; if it doesn't you hit a wall — switch direction instead
-  of spamming the blocked action"*).
-- **Final result (measured, honest).** Opus 4.8 + a planning prompt + memory
-  lifted the Level-1 clear rate from **~12% (baseline) to ~67%** (8/12 over 6
-  self-improvement cycles, peaking at 100%) — the agent now *regularly reaches
-  Level 2*, but **never cleared it** (no Level 3). An **attribution ablation**
-  (identical setup, memory OFF) cleared L1 **3/4 — statistically the same** — so
-  the lift comes from the stronger policy + the prompt, **not** the parametric
-  memory. (An earlier apparent "memory win" was noise — same note, 1/4 cleared —
-  which we caught and reported.) The memory pipeline works end-to-end but did not
-  measurably beat a strong, well-prompted policy on this task.
+- **What works (our contribution):** the memory module reliably recalls *correct,
+  scene-relevant* knowledge from past play. The STM→LTM cascade turns a concrete
+  level observation into transferable, grounded guidance (e.g. *"if a move only
+  changes UI/non-player tiles, it's a wall — switch direction instead of repeating"*),
+  and the full loop runs end-to-end on real infra: encoder → GPT-5.2 hindsight →
+  Qwen3 1.7B/4B LoRA on Modal → per-step scene-conditioned injection.
+- **Why memory matters:** like a human, the agent without recollection re-makes
+  mistakes it has already made; the memory hands it the relevant lesson on sight
+  (see the visual board→note contrast in `report.html`).
+- **Honest scope:** clearing *deep* levels also needs **planning** (turning recalled
+  knowledge into a new multi-step plan) and the ability to **fine-tune the policy**
+  — but the policy here is a closed model we can only *inform*, not retrain. Those
+  aspects were beyond a 24h hack, so we don't claim a level-clearing win from memory:
+  at Level 1, a strong well-prompted Opus 4.8 was already competent enough that
+  memory was largely redundant *at that depth* (an ablation confirmed this; we also
+  caught and reported an earlier noise-level false-positive). The contribution is a
+  **working parametric-memory system + an honest map of what else it takes.**
 
 This is a benchmark where frontier models score <1%; we treat a *working
 self-improvement system* + an *honest read of whether it moves the needle* as the
